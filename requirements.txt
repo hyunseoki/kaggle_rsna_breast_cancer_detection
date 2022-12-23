@@ -1,0 +1,4 @@
+timm
+pylibjpeg
+pylibjpeg-openjpeg
+dicomsdl
