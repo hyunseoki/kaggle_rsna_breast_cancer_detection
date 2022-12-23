@@ -67,7 +67,7 @@ def main():
     assert os.path.isdir(args.base_path), f'wrong path({args.base_path})'
 
     train_df = pd.read_csv(r'F:\hyunseoki\kaggle_mammography\data\5fold\train0.csv')
-    valid_df = pd.read_csv(r'F:\hyunseoki\kaggle_mammography\data\5fold\train0.csv')
+    valid_df = pd.read_csv(r'F:\hyunseoki\kaggle_mammography\data\5fold\val0.csv')
     train_dataset = RSNADataset(
             base_path=args.base_path,
             label_df=train_df,

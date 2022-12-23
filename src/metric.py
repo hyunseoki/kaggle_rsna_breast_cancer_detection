@@ -25,8 +25,8 @@ def probabilistic_f1(labels, predictions, beta=1.):
 
 
 def probabilistic_f1_oversample(labels, predictions):
-    pred = np.array(labels)
-    true = np.array(predictions)
+    true = np.array(labels)
+    pred = np.array(predictions)
     _, counts = np.unique(true, return_counts=True)
 
     diff = counts[0] - counts[1]
