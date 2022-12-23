@@ -51,13 +51,6 @@ def main():
     if args.comments is not None:
         args.save_folder = os.path.join(args.save_folder, args.comments)
 
-    if args.use_wandb:
-        trainer.initWandb(
-            project_name='KAGGLE_RSNA_MAMMOGRAPHY',
-            run_name=args.comments,
-            args=args,
-        )
-        
     print('=' * 50)
     print('[info msg] arguments')
     for key, value in vars(args).items():
@@ -132,6 +125,13 @@ def main():
         num_epochs=args.epochs,
         use_wandb=args.use_wandb,
     )
+
+    if args.use_wandb:
+        trainer.initWandb(
+            project_name='KAGGLE_RSNA_MAMMOGRAPHY',
+            run_name=args.comments,
+            args=args,
+        )
 
     trainer.train()
 
