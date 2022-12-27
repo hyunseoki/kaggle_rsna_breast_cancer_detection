@@ -33,6 +33,7 @@ def main():
     parser.add_argument('--save_folder', type=str, default='./checkpoint')
     parser.add_argument('--use_wandb', type=str2bool, default=False)
 
+    parser.add_argument('--backbone', type=str, default='efficientnet', choices=['efficientnet', 'resnet'])
     parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -59,8 +60,8 @@ def main():
 
     assert os.path.isdir(args.base_path), f'wrong path({args.base_path})'
 
-    train_df = pd.read_csv(r'F:\hyunseoki\kaggle_mammography\data\5fold\train0.csv')
-    valid_df = pd.read_csv(r'F:\hyunseoki\kaggle_mammography\data\5fold\val0.csv')
+    train_df = pd.read_csv(r'/home/hyunseoki/ssd1/02_src/kaggle_rsna_breast_cancer_detection/data/5fold/train0.csv')
+    valid_df = pd.read_csv(r'/home/hyunseoki/ssd1/02_src/kaggle_rsna_breast_cancer_detection/data/5fold/val0.csv')
     train_dataset = RSNADataset(
             base_path=args.base_path,
             label_df=train_df,
@@ -78,6 +79,7 @@ def main():
             batch_size=args.batch_size,
             sampler=get_sampler(df=train_df),
             drop_last=True,
+            num_workers=2,
         )
     else:
         train_data_loader = torch.utils.data.DataLoader(
@@ -85,15 +87,21 @@ def main():
             batch_size=args.batch_size,
             shuffle=True,
             drop_last=True,
+            num_workers=2,
         )
 
     valid_data_loader = torch.utils.data.DataLoader(
         valid_dataset,
-        batch_size=args.batch_size,
+        batch_size=args.batch_size * 2,
         shuffle=False,
+        num_workers=2,
     )
 
-    model = models.Classifier()
+    if args.backbone=='efficientnet':
+        model = models.Classifier()
+    elif args.backbone=='resnet':
+        model = models.ResNetModel()
+
     if args.resume != None:
         pth_data = torch.load(args.resume, map_location=args.device)
         model.load_state_dict(pth_data['model'])

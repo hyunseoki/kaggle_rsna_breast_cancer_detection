@@ -1,4 +1,7 @@
 timm
 pylibjpeg
 pylibjpeg-openjpeg
+pydicom
 dicomsdl
+pandas
+matplotlib

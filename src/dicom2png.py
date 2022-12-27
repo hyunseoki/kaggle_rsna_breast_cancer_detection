@@ -28,12 +28,14 @@ def dicom_file_to_ary(path, sz):
     data = dicom.pixelData()
     # dicom = pydicom.dcmread(path)
     # data = apply_voi_lut(dicom.pixel_array, dicom)
-    data = (data - data.min()) / (data.max() - data.min())
-    
+    # data = (data - data.min()) / (data.max() - data.min())
+    data = (data - data.min()) / (data.max() - data.min()+1e-6)  #this cast to float32
     if dicom.PhotometricInterpretation == "MONOCHROME1":
         data = 1 - data
-    data = cv2.resize(data, (sz, sz))
-    data = (data * 255).astype(np.uint8)
+    # data = cv2.resize(data, (sz, sz))
+    # data = (data * 255).astype(np.uint8)
+    data = cv2.resize(data, (sz, sz), interpolation=cv2.INTER_LINEAR)
+    data = (data * 65535).astype(np.uint16)
     return data
 
 
