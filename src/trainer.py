@@ -140,7 +140,7 @@ def validate_one_epoch(valid_loader, model, loss_func, metric_func, device):
 
 class ModelTrainer:
     def __init__(self, model, train_loader, valid_loader, loss_func, metric_func, optimizer, device, save_dir, 
-                       num_epochs, mode='max', scheduler=None, use_wandb=False):
+                       num_epochs, parallel=False, mode='max', scheduler=None, use_wandb=False):
 
         assert mode in ['min', 'max']
 
@@ -156,6 +156,7 @@ class ModelTrainer:
         self.scheduler = scheduler
         self.num_epochs = num_epochs
         self.use_wandb = use_wandb
+        self.parallel = parallel
 
         self.log = {
             'train_loss' : list(),
@@ -178,6 +179,10 @@ class ModelTrainer:
     def train(self):
         if self.device == 'cpu':
             print('[info msg] Start training the model on CPU')
+        elif self.parallel and torch.cuda.device_count() > 1:
+            print(f'Start training the model on {torch.cuda.device_count()} '
+                  f'{torch.cuda.get_device_name(torch.cuda.current_device())} in parallel')
+            self.model = torch.nn.DataParallel(self.model)
         else:
             print(f'[info msg] Start training the model on {torch.cuda.get_device_name(torch.cuda.current_device())}')
         print('=' * 50)
