@@ -17,7 +17,7 @@ class RSNADataset(torch.utils.data.Dataset):
         ) 
         assert os.path.isfile(img_fn), img_fn
 
-        img = cv2.imread(img_fn, 0)
+        img = cv2.imread(img_fn, cv2.IMREAD_ANYDEPTH)
         if self.transforms:
             img = self.transforms(image=img)['image']
 
