@@ -1,63 +1,48 @@
-import pydicom
-from pydicom.pixel_data_handlers.util import apply_voi_lut
 import os
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import cv2
 from pathlib import Path
 import numpy as np
-from PIL import Image
 import multiprocessing as mp
 import argparse
 import dicomsdl as dicoml
 from itertools import repeat
+from util import str2bool
 
 
-# def dicom_file_to_ary(path):
-#     dicom = pydicom.read_file(path)
-#     data = dicom.pixel_array
-#     if dicom.PhotometricInterpretation == "MONOCHROME1":
-#         data = np.amax(data) - data
-#     data = data - np.min(data)
-#     data = data / np.max(data)
-#     data = (data * 255).astype(np.uint8)
-#     return data
+'''
+    https://www.kaggle.com/code/snnclsr/roi-extraction-using-opencv/notebook
+'''
+def crop_coords(img):
+    """
+    Crop ROI from image.
+    """
+    # Otsu's thresholding after Gaussian filtering
+    blur = cv2.GaussianBlur(img, (5, 5), 0)
+    # _, breast_mask = cv2.threshold(blur,0,255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    _, breast_mask = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + 16)
+    
+    cnts, _ = cv2.findContours(breast_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnt = max(cnts, key = cv2.contourArea)
+    x, y, w, h = cv2.boundingRect(cnt)
+    return (x, y, w, h)
 
 
-def dicom_file_to_ary(path, sz):
+def dicom_file_to_ary(path, sz=0, crop=True):
     dicom = dicoml.open(str(path))
     data = dicom.pixelData()
-    # dicom = pydicom.dcmread(path)
-    # data = apply_voi_lut(dicom.pixel_array, dicom)
-    # data = (data - data.min()) / (data.max() - data.min())
     data = (data - data.min()) / (data.max() - data.min()+1e-6)  #this cast to float32
     if dicom.PhotometricInterpretation == "MONOCHROME1":
         data = 1 - data
-    # data = cv2.resize(data, (sz, sz))
-    # data = (data * 255).astype(np.uint8)
-    data = cv2.resize(data, (sz, sz), interpolation=cv2.INTER_LINEAR)
+
+    if crop:
+        (x, y, w, h) = crop_coords((data * 255).astype(np.uint8))
+        data = data[y:y+h, x:x+w]
+
+    if sz != 0:
+        data = cv2.resize(data, (sz, sz), interpolation=cv2.INTER_LINEAR)
+
     data = (data * 65535).astype(np.uint16)
     return data
-
-
-def img2roi(img):
-    # Binarize the image
-    bin_img = cv2.threshold(img, 20, 255, cv2.THRESH_BINARY)[1]
-
-    # Make contours around the binarized image, keep only the largest contour
-    contours, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    contour = max(contours, key=cv2.contourArea)
-
-    # Find ROI from largest contour
-    ys = contour.squeeze()[:, 0]
-    xs = contour.squeeze()[:, 1]
-    roi =  img[np.min(xs):np.max(xs), np.min(ys):np.max(ys)]
-
-    return roi
-
-
-def preprocess(src):
-
-    return
 
 
 def process_path(path, args):
@@ -79,6 +64,7 @@ def process_path(path, args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dst_sz', type=int, default=1024)
+    parser.add_argument('--crop', type=str2bool, default=False)
     parser.add_argument('--src_path', type=str, default=r'G:\hyunseoki\data\kaggle\rsna-breast-cancer-detection\train_images')
     parser.add_argument('--dst_path', type=str, default='./data/train')
     args = parser.parse_args()
