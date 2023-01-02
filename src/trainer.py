@@ -117,7 +117,8 @@ def validate_one_epoch(valid_loader, model, loss_func, metric_func, device):
             train_y = sample['target'].float().to(device)
 
             with torch.no_grad():
-                pred_y = model(train_x)
+                with torch.cuda.amp.autocast():
+                    pred_y = model(train_x)
 
             loss_value = loss_func(input=pred_y, target=train_y).item()
             # metric_value = metric_func(labels=train_y, predictions=pred_y.sigmoid()).item()
