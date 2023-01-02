@@ -23,11 +23,12 @@ def main():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     # device = "cpu"
 
-    base_path = r"F:\hyunseoki\kaggle_mammography\data\train\1024"
+    base_path = r"/home/hyunseoki/ssd1/02_src/kaggle_rsna_breast_cancer_detection/data/train/1024_original"
     seed_everything(42)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default=device)
+    parser.add_argument('--kfold', type=int, default=0, choices=[0, 1, 2, 3, 4])
 
     parser.add_argument('--base_path', type=str, default=base_path)
     parser.add_argument('--save_folder', type=str, default='./checkpoint')
@@ -58,10 +59,9 @@ def main():
         print(key, ":", value)
     print('=' * 50)
 
-    assert os.path.isdir(args.base_path), f'wrong path({args.base_path})'
-
-    train_df = pd.read_csv(r'/home/hyunseoki/ssd1/02_src/kaggle_rsna_breast_cancer_detection/data/5fold/train0.csv')
-    valid_df = pd.read_csv(r'/home/hyunseoki/ssd1/02_src/kaggle_rsna_breast_cancer_detection/data/5fold/val0.csv')
+    train_df = pd.read_csv(f'/home/hyunseoki/ssd1/02_src/kaggle_rsna_breast_cancer_detection/data/5fold/train{args.kfold}.csv')
+    valid_df = pd.read_csv(f'/home/hyunseoki/ssd1/02_src/kaggle_rsna_breast_cancer_detection/data/5fold/val{args.kfold}.csv')
+    
     train_dataset = RSNADataset(
             base_path=args.base_path,
             label_df=train_df,
@@ -92,7 +92,7 @@ def main():
 
     valid_data_loader = torch.utils.data.DataLoader(
         valid_dataset,
-        batch_size=args.batch_size * 2,
+        batch_size=args.batch_size * 4,
         shuffle=False,
         num_workers=2,
     )
