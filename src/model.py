@@ -25,7 +25,7 @@ class ResNetModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = timm.create_model(
-            model_name='gluon_seresnext50_32x4d',
+            model_name='seresnext50_32x4d',
             pretrained=True,
             in_chans=1,
             drop_rate=0.3,
