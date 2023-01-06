@@ -44,6 +44,7 @@ def main():
 
     parser.add_argument('--loss_weight', type=float, default=1.0)
     parser.add_argument('--loss_type', type=str, default='bce', choices=['bce', 'focal'])
+    parser.add_argument('--label_smoothing', type=float, default=0)
 
     parser.add_argument('--train_oversample', type=str2bool, default=False)
     parser.add_argument('--val_oversample', type=str2bool, default=False)
@@ -113,9 +114,11 @@ def main():
         metric = metrics.probabilistic_f1
 
     if args.loss_type=='bce':
-        loss = torch.nn.BCEWithLogitsLoss(pos_weight=torch.as_tensor([args.loss_weight], device=args.device))
+        # loss = torch.nn.BCEWithLogitsLoss(pos_weight=torch.as_tensor([args.loss_weight])).to(args.device)
+        loss = losses.PytorchBCE(weight=args.loss_weight, label_smoothing=args.label_smoothing).to(args.device)
     else:
-        loss = losses.FocalWithLogitLoss()
+        # loss = losses.FocalWithLogitLoss()
+        loss = losses.torchvision_focal_loss
     
     optimizer = torch.optim.Adam(model.parameters(), args.lr, betas=(0.9, 0.99))
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)

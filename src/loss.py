@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torchvision
 
 
 class BCEWithLogitLoss(nn.Module):
@@ -8,8 +9,8 @@ class BCEWithLogitLoss(nn.Module):
         self.weight=weight
 
     def forward(self, input, target):
-        # p = torch.clip(input,1e-6,1-1e-6)
         p = input.sigmoid()
+        # p = torch.clip(input,1e-6,1-1e-6)
         y = target
         pos_loss = -y*torch.log(p)
         neg_loss = -(1-y)*torch.log(1-p)
@@ -18,15 +19,14 @@ class BCEWithLogitLoss(nn.Module):
 
         return loss
 
-
 class FocalWithLogitLoss(nn.Module):
     def __init__(self, gamma=2):
         super().__init__()
-        self.gamma=gamma
+        self.gamma = gamma
 
     def forward(self, input, target):
-        # p = torch.clip(input,1e-6,1-1e-6)
         p = input.sigmoid()
+        p = torch.clip(input, 1e-6, 1 - 1e-6)
         y = target
 
         pos_loss = -y*torch.log(p)*(1-p)**self.gamma
@@ -35,6 +35,34 @@ class FocalWithLogitLoss(nn.Module):
         loss = loss.mean()
         return loss
 
+
+class PytorchBCE(nn.Module):
+    def __init__(self, weight=1, label_smoothing=0.0):
+        super().__init__()
+        self.weight=weight
+        self.label_smoothing = label_smoothing
+        self.bce_loss = torch.nn.BCEWithLogitsLoss(pos_weight=torch.as_tensor([weight]))
+
+    def forward(self, input, target):
+        target = torch.abs(target - self.label_smoothing)
+        loss = self.bce_loss(input, target)
+
+        return loss
+
+
+def torchvision_focal_loss(input, target):
+    alpha = 0.5
+    gamma = 2.0
+    reduction = 'mean'
+    focal_loss = torchvision.ops.sigmoid_focal_loss(
+            input,
+            target,
+            alpha=alpha,
+            gamma=gamma,
+            reduction=reduction,
+        )
+
+    return focal_loss
 
 # '''
 # https://discuss.pytorch.org/t/is-this-a-correct-implementation-for-focal-loss-in-pytorch/43327/14
