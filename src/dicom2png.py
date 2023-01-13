@@ -5,6 +5,7 @@ import numpy as np
 import multiprocessing as mp
 import argparse
 import dicomsdl as dicoml
+from pydicom.pixel_data_handlers.util import apply_voi_lut
 from itertools import repeat
 from util import str2bool
 
@@ -26,11 +27,57 @@ def crop_coords(img):
     x, y, w, h = cv2.boundingRect(cnt)
     return (x, y, w, h)
 
+'''
+    to do : check reference...
+'''
+def apply_voi_lut(dicom, image):
+    # Load only the variables we need
+    center = dicom["WindowCenter"]
+    width = dicom["WindowWidth"]
+    bits_stored = dicom["BitsStored"]
+    voi_lut_function = dicom["VOILUTFunction"]
 
-def dicom_file_to_ary(path, sz=0, crop=True):
+    # For sigmoid it's a list, otherwise a single value
+    if isinstance(center, list):
+        center = center[0]
+    if isinstance(width, list):
+        width = width[0]
+
+    # Set y_min, max & range
+    y_min = 0
+    y_max = float(2**bits_stored - 1)
+    y_range = y_max
+
+    # Function with default LINEAR (so for Nan, it will use linear)
+    if voi_lut_function == "SIGMOID":
+        img = y_range / (1 + np.exp(-4 * (img - center) / width)) + y_min
+    else:
+        # Checks width for < 1 (in our case not necessary, always >= 750)
+        center -= 0.5
+        width -= 1
+
+        below = image <= (center - width / 2)
+        above = image > (center + width / 2)
+        between = np.logical_and(~below, ~above)
+
+        image[below] = y_min
+        image[above] = y_max
+        if between.any():
+            image[between] = (
+                ((image[between] - center) / width + 0.5) * y_range + y_min
+            )
+
+    return image
+
+
+def dicom_file_to_ary(path, sz=0, crop=True, voi_lut=True):
     dicom = dicoml.open(str(path))
     data = dicom.pixelData()
     data = (data - data.min()) / (data.max() - data.min()+1e-6)  #this cast to float32
+
+    if voi_lut:
+        data = apply_voi_lut(dicom, data)
+
     if dicom.PhotometricInterpretation == "MONOCHROME1":
         data = 1 - data
 
