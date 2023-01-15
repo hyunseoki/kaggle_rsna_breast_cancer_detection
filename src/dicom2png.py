@@ -27,6 +27,7 @@ def crop_coords(img):
     x, y, w, h = cv2.boundingRect(cnt)
     return (x, y, w, h)
 
+
 '''
     to do : check reference...
 '''
@@ -70,14 +71,35 @@ def apply_voi_lut(dicom, image):
     return image
 
 
-def dicom_file_to_ary(path, sz=0, crop=True, voi_lut=True):
+def image_resize(image, width=None, height=None, inter=cv2.INTER_LINEAR):
+    dim = None
+    (h, w) = image.shape[:2]
+
+    if width is None and height is None:
+        return image
+
+    if width is None:
+        r = height / float(h)
+        dim = (int(w * r), height)
+    else:
+        r = width / float(w)
+        dim = (width, int(h * r))
+    resized = cv2.resize(image, dim, interpolation = inter)
+
+    return resized
+
+
+'''
+    https://www.kaggle.com/code/radek1/how-to-process-dicom-images-to-pngs
+'''
+def dicom_file_to_ary(path, sz=0, keep_ratio=True, crop=True, voi_lut=True):
     dicom = dicoml.open(str(path))
     data = dicom.pixelData()
-    data = (data - data.min()) / (data.max() - data.min()+1e-6)  #this cast to float32
 
     if voi_lut:
         data = apply_voi_lut(dicom, data)
 
+    data = (data - data.min()) / (data.max() - data.min()+1e-6)  #this cast to float32
     if dicom.PhotometricInterpretation == "MONOCHROME1":
         data = 1 - data
 
@@ -85,8 +107,16 @@ def dicom_file_to_ary(path, sz=0, crop=True, voi_lut=True):
         (x, y, w, h) = crop_coords((data * 255).astype(np.uint8))
         data = data[y:y+h, x:x+w]
 
-    if sz != 0:
-        data = cv2.resize(data, (sz, sz), interpolation=cv2.INTER_LINEAR)
+    ## maintaining the aspect ratio, longer side resized to 1024
+    if sz!=0:
+        if keep_ratio:
+            h, w = data.shape
+            if w > h:
+                data = image_resize(data, width=sz)
+            else:
+                data = image_resize(data, height=sz)
+        else:
+            data = cv2.resize(data, (sz, sz), interpolation=cv2.INTER_LINEAR)
 
     data = (data * 65535).astype(np.uint16)
     return data
@@ -99,7 +129,13 @@ def process_path(path, args):
 
     for image_path in path.iterdir():
         save_fn = f'{dst_dir}/{image_path.stem}.png'
-        processed_ary = dicom_file_to_ary(image_path, args.dst_sz)
+        processed_ary = dicom_file_to_ary(
+            path=image_path,
+            sz=args.dst_sz,
+            keep_ratio=args.keep_ratio,
+            crop=args.crop,
+            voi_lut=args.voi_lut,
+        )
         cv2.imwrite(
             save_fn,
             processed_ary
@@ -110,14 +146,16 @@ def process_path(path, args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dst_sz', type=int, default=1024)
-    parser.add_argument('--crop', type=str2bool, default=False)
     parser.add_argument('--src_path', type=str, default=r'G:\hyunseoki\data\kaggle\rsna-breast-cancer-detection\train_images')
     parser.add_argument('--dst_path', type=str, default='./data/train')
+    parser.add_argument('--dst_sz', type=int, default=1024)
+    parser.add_argument('--crop', type=str2bool, default=False)
+    parser.add_argument('--aspect_ratio', type=str2bool, default=False)
+    parser.add_argument('--voi_lut', type=str2bool, default=False)
     args = parser.parse_args()
 
     assert os.path.isdir(args.src_path), args.src_path
-    os.makedirs(os.path.join(args.dst_path, str(args.dst_sz)), exist_ok=True)
+    os.makedirs(os.path.join(args.dst_path), exist_ok=True)
 
     paths = list(Path(args.src_path).iterdir())
 
