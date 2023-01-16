@@ -29,7 +29,7 @@ def crop_coords(img):
 
 
 '''
-    to do : check reference...
+    https://www.kaggle.com/code/bobdegraaf/dicomsdl-voi-lut
 '''
 def apply_voi_lut(dicom, image):
     # Load only the variables we need
@@ -51,7 +51,7 @@ def apply_voi_lut(dicom, image):
 
     # Function with default LINEAR (so for Nan, it will use linear)
     if voi_lut_function == "SIGMOID":
-        img = y_range / (1 + np.exp(-4 * (img - center) / width)) + y_min
+        image = y_range / (1 + np.exp(-4 * (image - center) / width)) + y_min
     else:
         # Checks width for < 1 (in our case not necessary, always >= 750)
         center -= 0.5
@@ -124,7 +124,7 @@ def dicom_file_to_ary(path, sz=0, keep_ratio=True, crop=True, voi_lut=True):
 
 def process_path(path, args):
     parent_path = str(path).replace('\\', '/').split('/')[-1]
-    dst_dir = os.path.join(args.dst_path, str(args.dst_sz), parent_path)
+    dst_dir = os.path.join(args.dst_path, parent_path)
     os.makedirs(dst_dir, exist_ok=True)
 
     for image_path in path.iterdir():
@@ -150,7 +150,7 @@ def main():
     parser.add_argument('--dst_path', type=str, default='./data/train')
     parser.add_argument('--dst_sz', type=int, default=1024)
     parser.add_argument('--crop', type=str2bool, default=False)
-    parser.add_argument('--aspect_ratio', type=str2bool, default=False)
+    parser.add_argument('--keep_ratio', type=str2bool, default=False)
     parser.add_argument('--voi_lut', type=str2bool, default=False)
     args = parser.parse_args()
 
