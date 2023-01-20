@@ -168,6 +168,7 @@ class ModelTrainer:
 
         self.elapsed_time = None
         self.lr_curve = list()
+        os.makedirs(self.save_path, exist_ok=True)
 
     def initWandb(self, project_name, run_name, args):
         assert self.use_wandb == True
