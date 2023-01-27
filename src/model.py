@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import timm
+from nextvit import nextvit_base
 
 
 class Classifier(nn.Module):
@@ -26,7 +27,7 @@ class ResNetModel(nn.Module):
         super().__init__()
         self.model = timm.create_model(
             model_name='seresnext50_32x4d',
-            pretrained=True,
+            pretrained=False,
             in_chans=1,
             drop_rate=0.3,
             drop_path_rate=0.2,
@@ -38,9 +39,21 @@ class ResNetModel(nn.Module):
         return out
 
 
+class NextViT(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.register_buffer('mean', torch.FloatTensor([0.5, 0.5, 0.5]).reshape(1, 3, 1, 1))
+        self.register_buffer('std', torch.FloatTensor([0.5, 0.5, 0.5]).reshape(1, 3, 1, 1))
+        self.model = nextvit_base(pretrained=False, num_classes=1)
+
+    def forward(self, dcm):
+        x = (dcm - self.mean) / self.std
+        out = self.model(x)
+        return out
+
 if __name__ == '__main__':
-    x = torch.randn(1, 1, 224, 224)
-    model = ResNetModel()
+    x = torch.randn(1, 3, 224, 224)
+    model = NextViT()
     # model = Classifier()
 
     print(model)
