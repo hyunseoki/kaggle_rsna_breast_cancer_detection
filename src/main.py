@@ -1,5 +1,4 @@
 import os
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import argparse
 import pandas as pd
 import torch
@@ -35,7 +34,7 @@ def main():
     parser.add_argument('--save_folder', type=str, default='./checkpoint')
     parser.add_argument('--use_wandb', type=str2bool, default=False)
 
-    parser.add_argument('--backbone', type=str, default='efficientnet', choices=['efficientnet', 'resnet'])
+    parser.add_argument('--backbone', type=str, default='efficientnet', choices=['efficientnet', 'resnet', 'convnext', 'nextvit'])
     parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -46,7 +45,7 @@ def main():
     parser.add_argument('--loss_type', type=str, default='bce', choices=['bce', 'focal'])
     parser.add_argument('--label_smoothing', type=float, default=0)
 
-    parser.add_argument('--train_oversample', type=str2bool, default=False)
+    parser.add_argument('--train_oversample', type=str2bool, default=True)
     parser.add_argument('--val_oversample', type=str2bool, default=False)
 
     parser.add_argument('--comments', type=str, default=None)
@@ -103,6 +102,10 @@ def main():
         model = models.Classifier()
     elif args.backbone=='resnet':
         model = models.ResNetModel()
+    elif args.backbone=='convnext':
+        model = models.ConvNeXt()
+    elif args.backbone=='nextvit':
+        model = models.NextViT()
 
     if args.resume != None:
         pth_data = torch.load(args.resume, map_location=args.device)
