@@ -4,12 +4,11 @@
 
 # Copyright (c) ByteDance Inc. All rights reserved.
 from functools import partial
-
 import torch
 import torch.utils.checkpoint as checkpoint
 from einops import rearrange
 from timm.models.layers import DropPath, trunc_normal_
-from timm.models.registry import register_model
+from timm.models._registry import register_model
 from torch import nn
 
 
@@ -343,7 +342,7 @@ class NextViT(nn.Module):
                                   [NCB] * (depths[3] - 1) + [NTB]]
 
         self.stem = nn.Sequential(
-            ConvBNReLU(3, stem_chs[0], kernel_size=3, stride=2),
+            ConvBNReLU(1, stem_chs[0], kernel_size=3, stride=2),
             ConvBNReLU(stem_chs[0], stem_chs[1], kernel_size=3, stride=1),
             ConvBNReLU(stem_chs[1], stem_chs[2], kernel_size=3, stride=1),
             ConvBNReLU(stem_chs[2], stem_chs[2], kernel_size=3, stride=2),
