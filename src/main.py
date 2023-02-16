@@ -35,6 +35,7 @@ def main():
     parser.add_argument('--use_wandb', type=str2bool, default=False)
 
     parser.add_argument('--backbone', type=str, default='efficientnet', choices=['efficientnet', 'resnet', 'convnext', 'nextvit'])
+    parser.add_argument('--use_gem', type=str2bool, default=False)
     parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -99,9 +100,9 @@ def main():
     )
 
     if args.backbone=='efficientnet':
-        model = models.Classifier()
+        model = models.Classifier(gem=args.use_gem)
     elif args.backbone=='resnet':
-        model = models.ResNetModel()
+        model = models.ResNetModel(gem=args.use_gem)
     elif args.backbone=='convnext':
         model = models.ConvNeXt()
     elif args.backbone=='nextvit':

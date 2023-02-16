@@ -5,7 +5,7 @@ import numpy as np
 import multiprocessing as mp
 import argparse
 import dicomsdl as dicoml
-from pydicom.pixel_data_handlers.util import apply_voi_lut
+import pydicom
 from itertools import repeat
 from util import str2bool
 
@@ -30,8 +30,13 @@ def crop_coords(img):
 
 '''
     https://www.kaggle.com/code/bobdegraaf/dicomsdl-voi-lut
+    https://www.kaggle.com/code/markwijkhuizen/rsna-convnextv2-inference-tensorflow#VOI-LUT
 '''
 def apply_voi_lut(dicom, image):
+    # Additional Checks
+    if 'WindowWidth' not in dicom.getPixelDataInfo() or 'WindowWidth' not in dicom.getPixelDataInfo():
+        return image
+
     # Load only the variables we need
     center = dicom["WindowCenter"]
     width = dicom["WindowWidth"]
@@ -90,14 +95,42 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_LINEAR):
 
 
 '''
+    https://www.kaggle.com/code/christofhenkel/se-resnext50-full-gpu-decoding
+'''
+def parse_window_element(elem):
+    if type(elem)==list:
+        return float(elem[0])
+    if type(elem)==str:
+        return float(elem)
+    if type(elem)==float:
+        return elem
+    if type(elem)==pydicom.dataelem.DataElement:
+        try:
+            return float(elem[0])
+        except:
+            return float(elem.value)
+    return None
+
+
+def linear_window(data, center, width):
+    lower, upper = center - width // 2, center + width // 2
+    data = np.clip(data, a_min=lower, a_max=upper)
+    return data 
+
+
+'''
     https://www.kaggle.com/code/radek1/how-to-process-dicom-images-to-pngs
 '''
-def dicom_file_to_ary(path, sz=0, keep_ratio=True, crop=True, voi_lut=True):
+def dicom_file_to_ary(path, sz=1024, crop=True, apply_window=False):
     dicom = dicoml.open(str(path))
     data = dicom.pixelData()
 
-    if voi_lut:
-        data = apply_voi_lut(dicom, data)
+    if apply_window:
+        center = parse_window_element(dicom["WindowCenter"]) 
+        width = parse_window_element(dicom["WindowWidth"])
+            
+        if (center is not None) & (width is not None):
+            data = linear_window(data, center, width)
 
     data = (data - data.min()) / (data.max() - data.min()+1e-6)  #this cast to float32
     if dicom.PhotometricInterpretation == "MONOCHROME1":
@@ -107,18 +140,9 @@ def dicom_file_to_ary(path, sz=0, keep_ratio=True, crop=True, voi_lut=True):
         (x, y, w, h) = crop_coords((data * 255).astype(np.uint8))
         data = data[y:y+h, x:x+w]
 
-    ## maintaining the aspect ratio, longer side resized to 1024
-    if sz!=0:
-        if keep_ratio:
-            h, w = data.shape
-            if w > h:
-                data = image_resize(data, width=sz)
-            else:
-                data = image_resize(data, height=sz)
-        else:
-            data = cv2.resize(data, (sz, sz), interpolation=cv2.INTER_LINEAR)
-
+    data = cv2.resize(data, (sz, sz), interpolation=cv2.INTER_LINEAR)
     data = (data * 65535).astype(np.uint16)
+
     return data
 
 
@@ -132,9 +156,8 @@ def process_path(path, args):
         processed_ary = dicom_file_to_ary(
             path=image_path,
             sz=args.dst_sz,
-            keep_ratio=args.keep_ratio,
             crop=args.crop,
-            voi_lut=args.voi_lut,
+            apply_window=args.apply_window,
         )
         cv2.imwrite(
             save_fn,
@@ -150,8 +173,7 @@ def main():
     parser.add_argument('--dst_path', type=str, default='./data/train')
     parser.add_argument('--dst_sz', type=int, default=1024)
     parser.add_argument('--crop', type=str2bool, default=False)
-    parser.add_argument('--keep_ratio', type=str2bool, default=False)
-    parser.add_argument('--voi_lut', type=str2bool, default=False)
+    parser.add_argument('--apply_window', type=str2bool, default=False)
     args = parser.parse_args()
 
     assert os.path.isdir(args.src_path), args.src_path
