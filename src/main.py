@@ -28,6 +28,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default=device)
     parser.add_argument('--parallel', type=str2bool, default=False)
+    parser.add_argument('--seed', type=int, default=42, choices=[42, 777])
     parser.add_argument('--kfold', type=int, default=0, choices=[0, 1, 2, 3, 4])
 
     parser.add_argument('--base_path', type=str, default=base_path)
@@ -61,8 +62,8 @@ def main():
         print(key, ":", value)
     print('=' * 50)
 
-    train_df = pd.read_csv(rf'./data/5fold/train{args.kfold}.csv')
-    valid_df = pd.read_csv(rf'./data/5fold/val{args.kfold}.csv')
+    train_df = pd.read_csv(rf'./data/5fold_seed{args.seed}/train{args.kfold}.csv')
+    valid_df = pd.read_csv(rf'./data/5fold_seed{args.seed}/val{args.kfold}.csv')
     
     train_dataset = RSNADataset(
             base_path=args.base_path,
@@ -107,6 +108,7 @@ def main():
         model = models.ConvNeXt()
     elif args.backbone=='nextvit':
         model = models.NextViT()
+    print(f'{model._get_name()} is created')
 
     if args.resume != None:
         pth_data = torch.load(args.resume, map_location=args.device)
